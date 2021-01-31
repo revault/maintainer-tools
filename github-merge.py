@@ -200,10 +200,12 @@ def tree_sha512sum(commit='HEAD'):
 def get_acks_from_comments(head_commit, comments) -> dict:
     # Look for abbreviated commit id, because not everyone wants to type/paste
     # the whole thing and the chance of collisions within a PR is small enough
+    # Look for not-all-uppercase ACKs as well.
     head_abbrev = head_commit[0:6]
     acks = {}
     for c in comments:
-        review = [l for l in c['body'].splitlines() if 'ACK' in l and head_abbrev in l]
+        review = [l for l in c['body'].splitlines()
+                  if 'ACK' in l.upper() and head_abbrev in l]
         if review:
             acks[c['user']['login']] = review[0]
     return acks
