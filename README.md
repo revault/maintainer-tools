@@ -63,6 +63,14 @@ client via `pip3 install opentimestamps-client`. Then, download the gpg wrapper
 [the ots git integration documentation](https://github.com/opentimestamps/opentimestamps-client/blob/master/doc/git-integration.md#usage)
 for further details.
 
+verify-commits
+--------------
+
+Script to verify signatures and tree hashes of all commits made with the `github-merge.py`
+script.
+
+See the [README](verify-commits/README.md) for more details.
+
 backport
 --------
 
