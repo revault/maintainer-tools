@@ -109,20 +109,42 @@ def tree_sha512sum(commit='HEAD'):
 
 def main():
     # Parse arguments
-    parser = argparse.ArgumentParser(usage='%(prog)s [options] [commit id]')
-    parser.add_argument('--disable-tree-check', action='store_false', dest='verify_tree', help='disable SHA-512 tree check')
-    parser.add_argument('--clean-merge', type=float, dest='clean_merge', default=float('inf'), help='Only check clean merge after <NUMBER> days ago (default: %(default)s)', metavar='NUMBER')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--disable-tree-check', action='store_false',
+                        dest='verify_tree', help='disable SHA-512 tree check')
+    parser.add_argument('--clean-merge', type=float, dest='clean_merge',
+                        default=float('inf'), help='Only check clean merge '
+                        'after <NUMBER> days ago (default: %(default)s)',
+                        metavar='NUMBER')
+    parser.add_argument("repository", help="The repository to verify the"
+                        " commits for. Used to determine data files.")
     parser.add_argument('commit', nargs='?', default='HEAD', help='Check clean merge up to commit <commit>')
     args = parser.parse_args()
 
-    # get directory of this program and read data files
-    dirname = os.path.dirname(os.path.abspath(__file__))
-    print("Using verify-commits data from " + dirname)
-    verified_root = open(dirname + "/trusted-git-root", "r", encoding="utf8").read().splitlines()[0]
-    verified_sha512_root = open(dirname + "/trusted-sha512-root-commit", "r", encoding="utf8").read().splitlines()[0]
-    revsig_allowed = open(dirname + "/allow-revsig-commits", "r", encoding="utf-8").read().splitlines()
-    unclean_merge_allowed = open(dirname + "/allow-unclean-merge-commits", "r", encoding="utf-8").read().splitlines()
-    incorrect_sha512_allowed = open(dirname + "/allow-incorrect-sha512-commits", "r", encoding="utf-8").read().splitlines()
+    # Check the directories
+    bindir = os.path.dirname(os.path.abspath(__file__))
+    datadir = os.path.join(bindir, args.repository)
+    if not os.path.exists(datadir):
+        print(f"{datadir} does not exist", file=sys.stderr)
+        sys.exit(1)
+    if os.path.split(os.getcwd())[-1] != args.repository:
+        print(f"Verifying for {args.repository} but you are in {os.getcwd()}",
+              file=sys.stderr)
+        sys.exit(1)
+
+    # Read the data files (root of trust, commits to bypass, ..)
+    print("Using verify-commits data from " + datadir)
+    trusted_root_path = os.path.join(datadir, "trusted-git-root")
+    verified_root = open(trusted_root_path, "r", encoding="utf8").read().splitlines()[0]
+    sha_path = os.path.join(datadir, "trusted-sha512-root-commit")
+    verified_sha512_root = open(sha_path, "r", encoding="utf8").read().splitlines()[0]
+    revsig_path = os.path.join(datadir, "allow-revsig-commits")
+    revsig_allowed = open(revsig_path, "r", encoding="utf-8").read().splitlines()
+    unclean_path = os.path.join(datadir, "allow-unclean-merge-commits")
+    unclean_merge_allowed = open(unclean_path, "r", encoding="utf-8").read().splitlines()
+    incorrect_sha_path = os.path.join(datadir, "allow-incorrect-sha512-commits")
+    incorrect_sha512_allowed = open(incorrect_sha_path, "r", encoding="utf-8").read().splitlines()
+    trusted_keys_path = os.path.join(datadir, "trusted-keys")
 
     # Set commit and branch and set variables
     current_commit = args.commit
@@ -146,11 +168,12 @@ def main():
             verify_tree = False
             no_sha1 = False
 
-        os.environ['BITCOIN_VERIFY_COMMITS_ALLOW_SHA1'] = "0" if no_sha1 else "1"
-        os.environ['BITCOIN_VERIFY_COMMITS_ALLOW_REVSIG'] = "1" if current_commit in revsig_allowed else "0"
+        os.environ["REVAULT_VERIFY_COMMITS_ALLOW_SHA1"] = "0" if no_sha1 else "1"
+        os.environ["REVAULT_VERIFY_COMMITS_ALLOW_REVSIG"] = "1" if current_commit in revsig_allowed else "0"
+        os.environ["REVAULT_VERIFY_COMMITS_TRUSTED_KEYS_PATH"] = trusted_keys_path
 
         # Check that the commit (and parents) was signed with a trusted key
-        if git_verify_commit(dirname, current_commit):
+        if git_verify_commit(bindir, current_commit):
             if prev_commit != "":
                 print("No parent of {} was signed with a trusted key!".format(prev_commit), file=sys.stderr)
                 print("Parents are:", file=sys.stderr)

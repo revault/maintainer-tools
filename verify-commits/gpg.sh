@@ -9,7 +9,7 @@ VALID=false
 REVSIG=false
 IFS='
 '
-if [ "$BITCOIN_VERIFY_COMMITS_ALLOW_SHA1" = 1 ]; then
+if [ "$REVAULT_VERIFY_COMMITS_ALLOW_SHA1" = 1 ]; then
 	GPG_RES="$(printf '%s\n' "$INPUT" | gpg --trust-model always "$@" 2>/dev/null)"
 else
 	# Note how we've disabled SHA1 with the --weak-digest option, disabling
@@ -40,15 +40,15 @@ for LINE in $GPG_RES; do
 	"[GNUPG:] VALIDSIG "*)
 		while read KEY; do
 			[ "${LINE#?GNUPG:? VALIDSIG * * * * * * * * * }" = "$KEY" ] && VALID=true
-		done < ./contrib/verify-commits/trusted-keys
+		done < "$REVAULT_VERIFY_COMMITS_TRUSTED_KEYS_PATH"
 		;;
 	"[GNUPG:] REVKEYSIG "*)
-		[ "$BITCOIN_VERIFY_COMMITS_ALLOW_REVSIG" != 1 ] && exit 1
+		[ "$REVAULT_VERIFY_COMMITS_ALLOW_REVSIG" != 1 ] && exit 1
 		REVSIG=true
 		GOODREVSIG="[GNUPG:] GOODSIG ${LINE#* * *}"
 		;;
 	"[GNUPG:] EXPKEYSIG "*)
-		[ "$BITCOIN_VERIFY_COMMITS_ALLOW_REVSIG" != 1 ] && exit 1
+		[ "$REVAULT_VERIFY_COMMITS_ALLOW_REVSIG" != 1 ] && exit 1
 		REVSIG=true
 		GOODREVSIG="[GNUPG:] GOODSIG ${LINE#* * *}"
 		;;

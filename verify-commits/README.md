@@ -6,17 +6,16 @@ that checking out code, then running `verify-commits.py` against `HEAD` is
 _not_ safe, because the version of `verify-commits.py` that you just ran could
 be backdoored. Instead, you need to use a trusted version of verify-commits
 prior to checkout to make sure you're checking out only code signed by trusted
-keys:
+keys.
 
- ```sh
- git fetch origin && \
- ./contrib/verify-commits/verify-commits.py origin/master && \
- git checkout origin/master
- ```
-
-Note that the above isn't a good UI/UX yet, and needs significant improvements
-to make it more convenient and reduce the chance of errors; pull-reqs
-improving this process would be much appreciated.
+We are using a set of trusted parameters per repository. You need to specify the directory
+you want to verify commits from to `verify-commits.py`. Usage example:
+```
+:~/projects/revault/maintainer-tools$ cd ../revaultd/
+:~/projects/revault/revaultd$ ../maintainer-tools/verify-commits/verify-commits.py revaultd
+Using verify-commits data from /home/darosior/projects/revault/maintainer-tools/verify-commits/revaultd
+There is a valid path from "HEAD" to ac8a54790cf53c4c68a0d2d9ee0fa86bfbcd7dfc where all commits are signed!
+```
 
 Configuration files
 -------------------
