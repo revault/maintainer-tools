@@ -55,18 +55,25 @@ def git_verify_commit(datadir, commit):
 
 
 def tree_sha512sum(commit='HEAD'):
-    """Calculate the Tree-sha512 for the commit.
-
-    This is copied from github-merge.py. See https://github.com/bitcoin-core/bitcoin-maintainer-tools."""
+    overall = hashlib.sha512()
 
     # request metadata for entire tree, recursively
     files = []
     blob_by_name = {}
     for line in subprocess.check_output([GIT, 'ls-tree', '--full-tree', '-r', commit]).splitlines():
         name_sep = line.index(b'\t')
-        metadata = line[:name_sep].split()  # perms, 'blob', blobid
-        assert metadata[1] == b'blob'
-        name = line[name_sep + 1:]
+        # perms, 'blob' or 'commit', blobid
+        metadata = line[:name_sep].split()
+        # Path to file
+        name = line[name_sep+1:]
+        # If we hit a submodule, get the SHA512 of its tree as well.
+        if metadata[1] == b'commit':
+            curdir = os.path.abspath(os.getcwd())
+            os.chdir(name)
+            overall.update(bytes.fromhex(tree_sha512sum(metadata[2].decode())))
+            os.chdir(curdir)
+            continue
+        assert metadata[1] == b'blob', f"{metadata}"
         files.append(name)
         blob_by_name[name] = metadata[2]
 
@@ -74,7 +81,6 @@ def tree_sha512sum(commit='HEAD'):
     # open connection to git-cat-file in batch mode to request data for all blobs
     # this is much faster than launching it per file
     p = subprocess.Popen([GIT, 'cat-file', '--batch'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-    overall = hashlib.sha512()
     for f in files:
         blob = blob_by_name[f]
         # request blob
@@ -82,7 +88,7 @@ def tree_sha512sum(commit='HEAD'):
         p.stdin.flush()
         # read header: blob, "blob", size
         reply = p.stdout.readline().split()
-        assert reply[0] == blob and reply[1] == b'blob'
+        assert(reply[0] == blob and reply[1] == b'blob')
         size = int(reply[2])
         # hash the blob data
         intern = hashlib.sha512()
@@ -96,7 +102,7 @@ def tree_sha512sum(commit='HEAD'):
                 raise IOError('Premature EOF reading git cat-file output')
             ptr += bs
         dig = intern.hexdigest()
-        assert p.stdout.read(1) == b'\n'  # ignore LF that follows blob data
+        assert(p.stdout.read(1) == b'\n') # ignore LF that follows blob data
         # update overall hash with file hash
         overall.update(dig.encode("utf-8"))
         overall.update("  ".encode("utf-8"))
@@ -106,6 +112,7 @@ def tree_sha512sum(commit='HEAD'):
     if p.wait():
         raise IOError('Non-zero return value executing git cat-file')
     return overall.hexdigest()
+
 
 def main():
     # Parse arguments
