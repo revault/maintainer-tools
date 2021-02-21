@@ -134,10 +134,6 @@ def main():
     if not os.path.exists(datadir):
         print(f"{datadir} does not exist", file=sys.stderr)
         sys.exit(1)
-    if os.path.split(os.getcwd())[-1] != args.repository:
-        print(f"Verifying for {args.repository} but you are in {os.getcwd()}",
-              file=sys.stderr)
-        sys.exit(1)
 
     # Read the data files (root of trust, commits to bypass, ..)
     print("Using verify-commits data from " + datadir)
