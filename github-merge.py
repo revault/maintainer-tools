@@ -79,7 +79,7 @@ def sanitize_ghdata(rec):
     '''
     if 'title' in rec: # only for PRs
         rec['title'] = sanitize(rec['title'], newlines=False)
-    rec['body'] = sanitize(rec['body'], newlines=True)
+    rec['body'] = sanitize(rec['body'], newlines=True) if rec['body'] else ""
 
     # "Github username may only contain alphanumeric characters or hyphens'.
     # Use \Z instead of $ to not match final newline only end of string.
